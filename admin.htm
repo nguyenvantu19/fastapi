@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #89f7fe, #66a6ff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .container {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      width: 95%;
+      max-width: 1000px;
+      animation: fadeIn 0.6s ease-in-out;
+    }
+    h1,h2 { text-align: center; margin-bottom: 20px; color: #333; }
+
+    /* Tabs */
+    .tabs { display: flex; justify-content: center; margin-bottom: 20px; }
+    .tab {
+      padding: 10px 20px;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      font-weight: bold;
+      background: #eee;
+      margin: 0 5px;
+      transition: 0.3s;
+    }
+    .tab.active { background: #66a6ff; color: white; }
+
+    /* Form */
+    form {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    input {
+      flex: 1;
+      min-width: 150px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      transition: 0.3s;
+    }
+    input:focus {
+      border-color: #66a6ff;
+      box-shadow: 0 0 8px rgba(102,166,255,0.4);
+      outline: none;
+    }
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+      font-weight: bold;
+    }
+    #submitBtn, #submitProductBtn {
+      background: #66a6ff; color: white;
+    }
+    #submitBtn:hover, #submitProductBtn:hover {
+      background: #4a90e2;
+    }
+    .action-btn {
+      padding: 6px 12px; margin: 0 2px; font-size: 14px;
+    }
+    .edit { background: #fbc531; color: white; }
+    .edit:hover { background: #e1a800; }
+    .delete { background: #ff6b6b; color: white; }
+    .delete:hover { background: #e84141; }
+    table { width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; }
+    th, td { padding: 12px; text-align: center; }
+    th { background: #66a6ff; color: white; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    tr:hover { background: #f1faff; }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(20px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+    .hidden { display: none; }
+    img { max-width: 80px; border-radius: 6px; }
+  </style>
+
+  <script>
+    // Config API
+    const USER_API = "http://127.0.0.1:8000/users"; 
+    const PRODUCT_API = "http://127.0.0.1:8000/products"; 
+
+    let editingUserId = null; 
+    let editingProductId = null;
+
+    // USER 
+    async function fetchUsers() {
+      const res = await fetch(USER_API);
+      const users = await res.json();
+
+      let tbody = document.getElementById("userTable");
+      tbody.innerHTML = "";
+      users.forEach(u => {
+        let row = `<tr>
+          <td>${u.id}</td>
+          <td>${u.ten}</td>
+          <td>${u.tuoi}</td>
+          <td>${u.sdt}</td>
+          <td>
+            <button class="action-btn edit" onclick="editUser(${u.id}, '${u.ten}', ${u.tuoi}, '${u.sdt}')">✏ Sửa</button>
+            <button class="action-btn delete" onclick="deleteUser(${u.id})">🗑 Xoá</button>
+          </td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    async function addUser(event) {
+      event.preventDefault();
+      const ten = document.getElementById("ten").value;
+      const tuoi = document.getElementById("tuoi").value;
+      const sdt = document.getElementById("sdt").value;
+
+      if (editingUserId) {
+        await fetch(`${USER_API}/${editingUserId}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ten, tuoi: parseInt(tuoi), sdt})
+        });
+        editingUserId = null;
+        document.getElementById("submitBtn").innerText = "Thêm";
+      } else {
+        await fetch(USER_API, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ten, tuoi: parseInt(tuoi), sdt})
+        });
+      }
+      document.getElementById("userForm").reset();
+      fetchUsers();
+    }
+
+    async function deleteUser(id) {
+      await fetch(`${USER_API}/${id}`, { method: "DELETE" });
+      fetchUsers();
+    }
+
+    function editUser(id, ten, tuoi, sdt) {
+      document.getElementById("ten").value = ten;
+      document.getElementById("tuoi").value = tuoi;
+      document.getElementById("sdt").value = sdt;
+      editingUserId = id;
+      document.getElementById("submitBtn").innerText = "Cập nhật";
+    }
+
+    // PRODUCT 
+    async function fetchProducts() {
+      const res = await fetch(PRODUCT_API);
+      const products = await res.json();
+
+      let tbody = document.getElementById("productTable");
+      tbody.innerHTML = "";
+      products.forEach(p => {
+        let row = `<tr>
+          <td>${p.id}</td>
+          <td>${p.ten}</td>
+          <td>${p.gia.toLocaleString()} VND</td>
+          
+          <td>
+            <button class="action-btn edit" onclick="editProduct(${p.id}, '${p.ten}', ${p.gia}, '${p.anh}')">✏ Sửa</button>
+            <button class="action-btn delete" onclick="deleteProduct(${p.id})">🗑 Xoá</button>
+          </td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    async function addProduct(event) {
+      event.preventDefault();
+      const ten = document.getElementById("tenSP").value;
+      const gia = document.getElementById("gia").value;
+      const anh = document.getElementById("anh").value;
+
+      if (editingProductId) {
+        await fetch(`${PRODUCT_API}/${editingProductId}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ten, gia: parseFloat(gia), anh})
+        });
+        editingProductId = null;
+        document.getElementById("submitProductBtn").innerText = "Thêm";
+      } else {
+        await fetch(PRODUCT_API, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ten, gia: parseFloat(gia), anh})
+        });
+      }
+      document.getElementById("productForm").reset();
+      fetchProducts();
+    }
+
+    async function deleteProduct(id) {
+      await fetch(`${PRODUCT_API}/${id}`, { method: "DELETE" });
+      fetchProducts();
+    }
+
+    function editProduct(id, ten, gia, anh) {
+      document.getElementById("tenSP").value = ten;
+      document.getElementById("gia").value = gia;
+      document.getElementById("anh").value = anh;
+      editingProductId = id;
+      document.getElementById("submitProductBtn").innerText = "Cập nhật";
+    }
+
+    
+    function showTab(tab) {
+      document.getElementById("userSection").classList.add("hidden");
+      document.getElementById("productSection").classList.add("hidden");
+      document.getElementById("tabUsers").classList.remove("active");
+      document.getElementById("tabProducts").classList.remove("active");
+
+      if (tab === "users") {
+        document.getElementById("userSection").classList.remove("hidden");
+        document.getElementById("tabUsers").classList.add("active");
+        fetchUsers();
+      } else {
+        document.getElementById("productSection").classList.remove("hidden");
+        document.getElementById("tabProducts").classList.add("active");
+        fetchProducts();
+      }
+    }
+
+    window.onload = () => showTab("users");
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>Admin</h1>
+    <div class="tabs">
+      <div class="tab active" id="tabUsers" onclick="showTab('users')">Người dùng</div>
+      <div class="tab" id="tabProducts" onclick="showTab('products')">Sản phẩm</div>
+    </div>
+
+    <!-- USER  -->
+    <div id="userSection">
+      <form id="userForm" onsubmit="addUser(event)">
+        <input type="text" id="ten" placeholder="Tên" required>
+        <input type="number" id="tuoi" placeholder="Tuổi" required>
+        <input type="text" id="sdt" placeholder="Số điện thoại" required>
+        <button id="submitBtn" type="submit">Thêm</button>
+      </form>
+
+      <h2>Danh sách Người dùng</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Tên</th><th>Tuổi</th><th>SĐT</th><th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="userTable"></tbody>
+      </table>
+    </div>
+
+    <!-- PRODUCT  -->
+    <div id="productSection" class="hidden">
+      <form id="productForm" onsubmit="addProduct(event)">
+        <input type="text" id="tenSP" placeholder="Tên sản phẩm" required>
+        <input type="number" id="gia" placeholder="Giá" required>
+        <input type="text" id="anh" placeholder="Link ảnh" required>
+        <button id="submitProductBtn" type="submit">Thêm</button>
+      </form>
+
+      <h2>Danh mục Sản phẩm</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Tên</th><th>Giá</th><th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="productTable"></tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
